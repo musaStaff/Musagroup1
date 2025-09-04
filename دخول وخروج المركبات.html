@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>سجل المركبات</title>
+  <style>
+    body {
+      font-family: "Tahoma", sans-serif;
+      background: #f4f6f9;
+      margin: 20px;
+    }
+    h2 {
+      text-align: center;
+      color: #333;
+    }
+    .cards {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      width: 250px;
+      text-align: center;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 8px;
+      margin: 8px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #007bff;
+      color: #fff;
+      cursor: pointer;
+      font-weight: bold;
+      border: none;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      background: #fff;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background: #007bff;
+      color: #fff;
+    }
+    td.status-active {
+      color: green;
+      font-weight: bold;
+    }
+    td.status-closed {
+      color: red;
+      font-weight: bold;
+    }
+    .actions {
+      text-align: center;
+      margin: 20px 0;
+    }
+    .actions button {
+      width: auto;
+      margin: 5px;
+      padding: 10px 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>📋 نظام تسجيل دخول وخروج المركبات</h2>
+
+  <div class="cards">
+    <!-- بطاقة تسجيل دخول -->
+    <div class="card">
+      <h3>🚗 تسجيل دخول</h3>
+      <input type="text" placeholder="اسم الموظف">
+      <select>
+        <option>اختر المركبة</option>
+        <option>تويوتا فورتشنر</option>
+        <option>تويوتا كورولا</option>
+        <option>شيفروليه سيلفرادو</option>
+        <option>محطة رصد جودة الهواء 1</option>
+        <option>محطة رصد جودة الهواء 2</option>
+        <option>كيا ريو</option>
+      </select>
+      <button>تسجيل دخول</button>
+    </div>
+
+    <!-- بطاقة تسجيل خروج -->
+    <div class="card">
+      <h3>🕒 تسجيل خروج</h3>
+      <input type="text" placeholder="اسم الموظف">
+      <select>
+        <option>اختر المركبة</option>
+        <option>تويوتا فورتشنر</option>
+        <option>تويوتا كورولا</option>
+        <option>شيفروليه سيلفرادو</option>
+        <option>محطة رصد جودة الهواء 1</option>
+        <option>محطة رصد جودة الهواء 2</option>
+        <option>كيا ريو</option>
+      </select>
+      <button>تسجيل خروج</button>
+    </div>
+  </div>
+
+  <!-- أزرار التحكم -->
+  <div class="actions">
+    <button onclick="exportToCSV()">📥 تصدير إلى Excel</button>
+    <button onclick="clearArchive()">🗑 مسح جميع السجلات</button>
+  </div>
+
+  <!-- جدول السجلات -->
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>التاريخ</th>
+        <th>الموظف</th>
+        <th>المركبة</th>
+        <th>وقت الدخول</th>
+        <th>وقت الخروج</th>
+        <th>المدة</th>
+        <th>الحالة</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <script>
+  let archive = [];
+
+  if (localStorage.getItem('vehicleArchive')) {
+    archive = JSON.parse(localStorage.getItem('vehicleArchive'));
+    renderArchive();
+  }
+
+  function getCurrentDateTime() {
+    const now = new Date();
+    const date = now.toLocaleDateString('ar-EG');
+    const time = now.toLocaleTimeString('ar-EG', { hour12: false });
+    return { date, time, full: now };
+  }
+
+  function calculateDuration(start, end) {
+    const diffMs = end - start;
+    const diffMins = Math.floor(diffMs / 60000);
+    const hours = Math.floor(diffMins / 60);
+    const mins = diffMins % 60;
+    return `${hours} س ${mins} د`;
+  }
+
+  function renderArchive() {
+    const tbody = document.querySelector('table tbody');
+    tbody.innerHTML = '';
+    archive.forEach((record, index) => {
+      const row = `<tr>
+        <td>${index + 1}</td>
+        <td>${record.date}</td>
+        <td>${record.employee}</td>
+        <td>${record.vehicle}</td>
+        <td>${record.loginTime}</td>
+        <td>${record.logoutTime || '-'}</td>
+        <td>${record.duration || '-'}</td>
+        <td class="${record.status === 'نشط' ? 'status-active' : 'status-closed'}">${record.status}</td>
+      </tr>`;
+      tbody.innerHTML += row;
+    });
+  }
+
+  function login(employeeInput, vehicleSelect) {
+    const employee = employeeInput.value.trim();
+    const vehicle = vehicleSelect.value;
+
+    if (!employee || vehicle === 'اختر المركبة') {
+      alert('الرجاء إدخال اسم الموظف واختيار المركبة.');
+      return;
+    }
+
+    const existing = archive.find(rec => rec.employee === employee && rec.vehicle === vehicle && rec.status === 'نشط');
+    if (existing) {
+      alert('هذا الموظف مسجل بالفعل بنفس المركبة.');
+      return;
+    }
+
+    const { date, time, full } = getCurrentDateTime();
+
+    archive.push({
+      date: date,
+      employee: employee,
+      vehicle: vehicle,
+      loginTime: time,
+      loginFull: full,
+      logoutTime: '',
+      logoutFull: null,
+      duration: '',
+      status: 'نشط'
+    });
+
+    localStorage.setItem('vehicleArchive', JSON.stringify(archive));
+    renderArchive();
+
+    employeeInput.value = '';
+    vehicleSelect.selectedIndex = 0;
+  }
+
+  function logout(employeeInput, vehicleSelect) {
+    const employee = employeeInput.value.trim();
+    const vehicle = vehicleSelect.value;
+
+    if (!employee || vehicle === 'اختر المركبة') {
+      alert('الرجاء إدخال اسم الموظف واختيار المركبة.');
+      return;
+    }
+
+    for (let i = archive.length - 1; i >= 0; i--) {
+      if (archive[i].employee === employee && archive[i].vehicle === vehicle && archive[i].status === 'نشط') {
+        const { time, full } = getCurrentDateTime();
+        archive[i].logoutTime = time;
+        archive[i].logoutFull = full;
+        archive[i].status = 'مغلق';
+        archive[i].duration = calculateDuration(new Date(archive[i].loginFull), full);
+
+        localStorage.setItem('vehicleArchive', JSON.stringify(archive));
+        renderArchive();
+
+        employeeInput.value = '';
+        vehicleSelect.selectedIndex = 0;
+        return;
+      }
+    }
+    alert('لم يتم العثور على سجل نشط لهذا الموظف والمركبة.');
+  }
+
+  function exportToCSV() {
+    if (archive.length === 0) {
+      alert('لا توجد سجلات لتصديرها.');
+      return;
+    }
+    let csv = "رقم,التاريخ,الموظف,المركبة,وقت الدخول,وقت الخروج,المدة,الحالة\n";
+    archive.forEach((rec, i) => {
+      csv += `${i + 1},${rec.date},${rec.employee},${rec.vehicle},${rec.loginTime},${rec.logoutTime || "-"},${rec.duration || "-"},${rec.status}\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "سجل_المركبات.csv";
+    link.click();
+  }
+
+  function clearArchive() {
+    if (confirm("هل أنت متأكد أنك تريد مسح جميع السجلات؟")) {
+      archive = [];
+      localStorage.removeItem('vehicleArchive');
+      renderArchive();
+    }
+  }
+
+  const loginCard = document.querySelectorAll('.cards .card')[0];
+  const logoutCard = document.querySelectorAll('.cards .card')[1];
+
+  loginCard.querySelector('button').onclick = () => {
+    const employeeInput = loginCard.querySelector('input');
+    const vehicleSelect = loginCard.querySelector('select');
+    login(employeeInput, vehicleSelect);
+  };
+
+  logoutCard.querySelector('button').onclick = () => {
+    const employeeInput = logoutCard.querySelector('input');
+    const vehicleSelect = logoutCard.querySelector('select');
+    logout(employeeInput, vehicleSelect);
+  };
+  </script>
+
+</body>
+</html>
